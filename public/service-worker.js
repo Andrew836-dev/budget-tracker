@@ -6,6 +6,7 @@ const FILES_TO_CACHE = [
     // "/manifest.webmanifest",
     "/icons/icon-192x192.png",
     "/icons/icon-512x512.png",
+    "https://cdn.jsdelivr.net/npm/chart.js@2.8.0"
   ];
   
   const CACHE_NAME = "static-cache-v1";
@@ -43,8 +44,8 @@ const FILES_TO_CACHE = [
   // fetch
   self.addEventListener("fetch", function(evt) {
     // cache successful requests to the API
-    if (evt.request.url.includes("/api/")) {
-        console.log(evt.request.method);
+    if (evt.request.url.includes("/api/") && !evt.request.url.includes("bulk")) {
+        // console.log(evt.request.method);
       evt.respondWith(
         caches.open(DATA_CACHE_NAME).then(cache => {
           return fetch(evt.request)

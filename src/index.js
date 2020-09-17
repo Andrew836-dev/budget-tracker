@@ -66,14 +66,14 @@ function populateChart() {
 
   myChart = new Chart(ctx, {
     type: 'line',
-      data: {
-        labels,
-        datasets: [{
-            label: "Total Over Time",
-            fill: true,
-            backgroundColor: "#6666ff",
-            data
-        }]
+    data: {
+      labels,
+      datasets: [{
+        label: "Total Over Time",
+        fill: true,
+        backgroundColor: "#6666ff",
+        data
+      }]
     }
   });
 }
@@ -111,7 +111,7 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  
+
   // also send to server
   fetch("/api/transaction", {
     method: "POST",
@@ -121,33 +121,129 @@ function sendTransaction(isAdding) {
       "Content-Type": "application/json"
     }
   })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      saveRecord(transaction);
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
-
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+    });
 }
 
-document.querySelector("#add-btn").onclick = function() {
+document.querySelector("#add-btn").onclick = function () {
   sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
+/* everything before this point was provided as boilerplate for the week 19 homework */
+function showPending() {
+  // open a transaction on your pending db
+  const transaction = db.transaction(["pending"], "readwrite");
+  // access your pending object store
+  const pendingStore = transaction.objectStore("pending");
+  // get all records from store and set to a variable
+  const getAll = pendingStore.getAll();
+  // console.log("pending", getAll);
+
+  getAll.onsuccess = function () {
+    if (getAll.result.length > 0) {
+      getAll.result.forEach(pendingTransaction => {
+        // add to beginning of current array of data
+        transactions.unshift(pendingTransaction);
+      });
+
+      // re-run logic to populate ui with new record
+      populateChart();
+      populateTable();
+      populateTotal();
+    }
+  }
+}
+/* everything after this point (excluding else statement in onsuccess function) was done in the week 17 group mini-project */
+let db;
+// create a new db request for a "budget" database.
+const request = window.indexedDB.open("budget");
+
+request.onupgradeneeded = function (event) {
+  // create object store called "pending" and set autoIncrement to true
+  const db = event.target.result;
+  const pendingStore = db.createObjectStore("pending", { keyPath: "pendingID", autoIncrement: true });
+  // console.log(pendingStore);
+};
+
+request.onsuccess = function (event) {
+  db = event.target.result;
+  // console.log(db);
+  if (navigator.onLine) {
+    checkDatabase();
+  } else {
+    // I added this one for the week 19 homework
+    showPending();
+  }
+};
+
+request.onerror = function (event) {
+  // log error here
+  console.log(event);
+};
+
+function saveRecord(record) {
+  // create a transaction on the pending db with readwrite access
+  const transaction = db.transaction(["pending"], "readwrite");
+  // access your pending object store
+  const pendingStore = transaction.objectStore("pending");
+  // add record to your store with add method.
+  pendingStore.add(record);
+}
+
+function checkDatabase() {
+  // open a transaction on your pending db
+  const transaction = db.transaction(["pending"], "readwrite");
+  // access your pending object store
+  const pendingStore = transaction.objectStore("pending");
+  // get all records from store and set to a variable
+  const getAll = pendingStore.getAll();
+  // console.log(getAll);
+
+  getAll.onsuccess = function () {
+    if (getAll.result.length > 0) {
+      fetch('/api/transaction/bulk', {
+        method: 'POST',
+        body: JSON.stringify(getAll.result),
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': 'application/json',
+        },
+      })
+        .then((response) => response.json())
+        .then(() => {
+          // if successful, open a transaction on your pending db
+          const emptyTransaction = db.transaction(["pending"], "readwrite");
+          // access your pending object store
+          const emptyPendingStore = emptyTransaction.objectStore("pending");
+          // clear all items in your store
+          emptyPendingStore.clear();
+        });
+    }
+  };
+}
+
+// listen for app coming back online
+window.addEventListener('online', checkDatabase);
+
