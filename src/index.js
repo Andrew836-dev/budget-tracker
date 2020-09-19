@@ -151,7 +151,11 @@ document.querySelector("#add-btn").onclick = function () {
 document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
-/* everything before this point was provided as boilerplate for the week 19 homework */
+
+/* 
+ * everything before this point was provided as boilerplate for the week 19 homework 
+ */
+
 function showPending() {
   // open a transaction on your pending db
   const transaction = db.transaction(["pending"], "readwrite");
@@ -175,7 +179,11 @@ function showPending() {
     }
   }
 }
-/* everything after this point (excluding else statement in onsuccess function) was done in the week 17 group mini-project */
+
+/*
+ * everything after this point (excluding else statement in onsuccess function) was done in the week 17 group mini-project 
+ */
+
 let db;
 // create a new db request for a "budget" database.
 const request = window.indexedDB.open("budget");
